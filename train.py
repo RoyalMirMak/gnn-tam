@@ -7,6 +7,7 @@ import argparse
 
 from fddbenchmark import FDDDataset, FDDDataloader
 from gnn import GNN_TAM
+import os
 
 
 def parse_args():
@@ -17,7 +18,7 @@ def parse_args():
     parser.add_argument('--step_size', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--n_gnn', type=int, default=1)
-    parser.add_argument('--gsl_type', type=str, default='tanh')
+    parser.add_argument('--gsl_type', type=str, default='relu')
     parser.add_argument('--n_hidden', type=int, default=1024)
     parser.add_argument('--alpha', type=float, default=0.1)
     parser.add_argument('--k', type=int, default=None)
@@ -76,6 +77,7 @@ def train():
             av_loss.append(loss.item())
         print(f'Epoch: {e+1:2d}/{args.n_epochs}, average CE loss: {sum(av_loss)/len(av_loss):.4f}')
 
+    os.makedirs('saved_models', exist_ok=True)
     torch.save(model, 'saved_models/' + args.name + str(args.n_gnn) + '.pt')
 
 

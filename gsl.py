@@ -7,19 +7,24 @@ import torch.nn.functional as F
 class Graph_ReLu_W(nn.Module):
     def __init__(self, n_nodes, k, device):
         super(Graph_ReLu_W, self).__init__()
-        self.num_nodes = n_nodes
         self.k = k
-        self.A = nn.Parameter(torch.randn(n_nodes, n_nodes).to(device),
-                              requires_grad=True).to(device)
+        self.A = nn.Parameter(torch.randn(n_nodes, n_nodes))
 
     def forward(self, idx):
         adj = F.relu(self.A)
-        if self.k:
-            mask = torch.zeros(idx.size(0), idx.size(0)).to(self.device)
-            mask.fill_(float('0'))
-            v, id = (adj + torch.rand_like(adj)*0.01).topk(self.k, 1)
-            mask.scatter_(1, id, v.fill_(1))
-            adj = adj*mask
+        if self.k is not None:
+            mask = torch.zeros(idx.size(0), idx.size(0),
+                               device=adj.device, dtype=adj.dtype)
+
+            if self.training:
+                noise = torch.rand_like(adj) * 0.01
+                val_to_topk = adj + noise
+            else:
+                val_to_topk = adj
+
+            v, id = val_to_topk.topk(self.k, 1)
+            mask.scatter_(1, id, torch.ones_like(v))
+            adj = adj * mask
         return adj
 
 
