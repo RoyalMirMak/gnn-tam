@@ -7,11 +7,13 @@ import argparse
 
 from fddbenchmark import FDDDataset, FDDDataloader
 from gnn import GNN_TAM
+from cnn import CNNBaseline
 import os
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train model')
+    parser.add_argument('--model_type', type=str, default='gnn', choices=['gnn', 'cnn'])
     parser.add_argument('--dataset', type=str, default='reinartz_tep')
     parser.add_argument('--n_epochs', type=int, default=40)
     parser.add_argument('--window_size', type=int, default=100)
@@ -23,8 +25,9 @@ def parse_args():
     parser.add_argument('--alpha', type=float, default=0.1)
     parser.add_argument('--k', type=int, default=None)
     parser.add_argument('--name', type=str, default='gnn')
+    parser.add_argument('--kernel_size', type=int, default=3)
+    parser.add_argument('--dropout', type=float, default=0.2)
     return parser.parse_args()
-
 
 def train():
     args = parse_args()
@@ -48,15 +51,24 @@ def train():
         shuffle=True
     )
     # Model creation:
-    model = GNN_TAM(n_nodes=n_nodes,
-                    window_size=args.window_size,
-                    n_classes=n_classes,
-                    n_gnn=args.n_gnn,
-                    gsl_type=args.gsl_type,
-                    n_hidden=args.n_hidden,
-                    alpha=args.alpha,
-                    k=args.k,
-                    device=device)
+    if args.model_type == 'gnn':
+        model = GNN_TAM(n_nodes=n_nodes,
+                        window_size=args.window_size,
+                        n_classes=n_classes,
+                        n_gnn=args.n_gnn,
+                        gsl_type=args.gsl_type,
+                        n_hidden=args.n_hidden,
+                        alpha=args.alpha,
+                        k=args.k,
+                        device=device)
+    else:
+        model = CNNBaseline(n_nodes=n_nodes,
+                            window_size=args.window_size,
+                            n_classes=n_classes,
+                            n_hidden=args.n_hidden,
+                            n_layers=args.n_gnn,
+                            kernel_size=args.kernel_size,
+                            dropout=args.dropout)
     model.to(device)
     # Training:
     model.train()

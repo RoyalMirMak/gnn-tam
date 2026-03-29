@@ -56,11 +56,10 @@ class PrecomputedGCNLayer(nn.Module):
             I = torch.eye(n_nodes, device=adj.device)
             adj = adj + I
             
-            degree = adj.sum(dim=1)
-            degree_inv_sqrt = degree.pow(-0.5)
-            degree_inv_sqrt[torch.isinf(degree_inv_sqrt)] = 0
+            deg = adj.abs().sum(dim=1).clamp(min=1e-8)
+            deg_inv_sqrt = deg.pow(-0.5)
             
-            d_mat = torch.diag(degree_inv_sqrt)
+            d_mat = torch.diag(deg_inv_sqrt)
             a_hat = d_mat @ adj @ d_mat
             self.register_buffer('a_hat', a_hat)
 
@@ -131,12 +130,9 @@ class GNN_TAM_Folded(nn.Module):
 
 def main():
     parser = argparse.ArgumentParser(description='Fold GNN-TAM model and export to ONNX')
-    parser.add_argument('--model_path', type=str,
-                        help='Path to the input .pt model file')
-    parser.add_argument('--out_dir', type=str, default='onnx_models',
-                        help='Output directory for the ONNX model')
-    parser.add_argument('--output_name', type=str, default=None,
-                        help='Output filename')
+    parser.add_argument('--model_path', type=str)
+    parser.add_argument('--out_dir', type=str, default='onnx_models')
+    parser.add_argument('--output_name', type=str, default=None)
     args = parser.parse_args()
 
     if args.output_name is None:

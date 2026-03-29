@@ -15,7 +15,8 @@ class GCLayer(nn.Module):
     def forward(self, adj, X):
         adj = adj + torch.eye(adj.size(0)).to(adj.device)
         h = self.dense(X)
-        norm = adj.sum(1)**(-1/2)
+        deg = adj.abs().sum(1).clamp(min=1e-8)
+        norm = deg ** (-1/2)
         h = norm[None, :] * adj * norm[:, None] @ h
         return h
 

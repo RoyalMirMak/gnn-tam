@@ -101,34 +101,45 @@ class Graph_Undirected_A(nn.Module):
             adj = adj*mask
         return adj
 
+class Graph_Tanh_W(nn.Module):
+    def __init__(self, n_nodes, alpha, k, device):
+        super(Graph_Tanh_W, self).__init__()
+        self.alpha = alpha
+        self.k = k
+        self.A = nn.Parameter(torch.randn(n_nodes, n_nodes))
+
+    def forward(self, idx):
+        adj = torch.tanh(self.alpha * self.A)
+        if self.k is not None:
+            mask = torch.zeros(idx.size(0), idx.size(0),
+                               device=adj.device, dtype=adj.dtype)
+            if self.training:
+                noise = torch.rand_like(adj) * 0.01
+                val_to_topk = adj.abs() + noise
+            else:
+                val_to_topk = adj.abs()
+            _, id = val_to_topk.topk(self.k, 1)
+            mask.scatter_(1, id, torch.ones(idx.size(0), self.k,
+                                            device=adj.device, dtype=adj.dtype))
+            adj = adj * mask
+        return adj
 
 class GSL(nn.Module):
-    """
-    Graph structure learning block.
-    """
-    def __init__(
-            self,
-            gsl_type,
-            n_nodes,
-            window_size,
-            alpha,
-            k,
-            device):
+    def __init__(self, gsl_type, n_nodes, window_size, alpha, k, device):
         super(GSL, self).__init__()
         self.gsl_layer = None
         if gsl_type == 'relu':
             self.gsl_layer = Graph_ReLu_W(n_nodes, k, device)
+        elif gsl_type == 'tanh':
+            self.gsl_layer = Graph_Tanh_W(n_nodes, alpha, k, device)
         elif gsl_type == 'directed':
-            self.self.gsl_layer = Graph_Directed_A(n_nodes, window_size,
-                                                   alpha, k, device)
+            self.gsl_layer = Graph_Directed_A(n_nodes, window_size, alpha, k, device)
         elif gsl_type == 'unidirected':
-            self.self.gsl_layer = Graph_Uni_Directed_A(n_nodes, window_size,
-                                                       alpha, k, device)
+            self.gsl_layer = Graph_Uni_Directed_A(n_nodes, window_size, alpha, k, device)
         elif gsl_type == 'undirected':
-            self.self.gsl_layer = Graph_Undirected_A(n_nodes, window_size,
-                                                     alpha, k, device)
+            self.gsl_layer = Graph_Undirected_A(n_nodes, window_size, alpha, k, device)
         else:
-            print('Wrong name of graph structure learning layer!')
+            raise ValueError(f'Unknown GSL type: {gsl_type}')
 
     def forward(self, idx):
         return self.gsl_layer(idx)
